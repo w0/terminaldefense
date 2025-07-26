@@ -62,6 +62,14 @@ func doThings(ws *websocket.Conn) {
 
 		time.Sleep(time.Second * 2)
 
+		mt, p, err := ws.ReadMessage()
+
+		log.Println(mt)
+		log.Println(string(p))
+		if err != nil {
+			log.Printf("error reading ws msg %s", err)
+		}
+
 	}
 
 }
@@ -79,5 +87,9 @@ func startShell() ([]byte, error) {
 	}
 
 	return buf[:r], nil
+
+}
+
+func doTick() {
 
 }

@@ -9,6 +9,7 @@
     width: 100%;
     border: none;
     resize: none;
+    scroll-behavior: auto;
 }
 
 .terminal input {
