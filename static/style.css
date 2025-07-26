@@ -1,0 +1,16 @@
+.terminal {
+    box-sizing: border-box;
+    width: 600px;
+    font-size: 18px;
+}
+
+.terminal textarea {
+    height: 240px;
+    width: 100%;
+    border: none;
+    resize: none;
+}
+
+.terminal input {
+    width: 100%;
+}

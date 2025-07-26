@@ -2,11 +2,18 @@
 <html lang="en">
     <head>
         <title>Terminal Defense</title>
+        <link rel="stylesheet" href="style.css" />
     </head>
-
     <script src="term.js"></script>
     <body>
         <p>oh no hackers!!!</p>
-        <p id="wsget"></p>
+        <div class="terminal">
+            <div>
+                <textarea id="tty" readonly disabled="true"></textarea>
+            </div>
+            <div>
+                <input id="prompt" type="text" />
+            </div>
+        </div>
     </body>
 </html>

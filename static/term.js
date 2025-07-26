@@ -5,5 +5,9 @@ ws.onopen = function (event) {
 };
 
 ws.onmessage = function (event) {
-  document.getElementById("wsget").textContent = event.data;
+  document.getElementById("tty").textContent += "\n" + event.data;
+};
+
+ws.onclose = function (event) {
+  console.log(event.reason);
 };
