@@ -5,11 +5,9 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"os"
-	"os/exec"
 	"path"
 	"time"
 
-	"github.com/creack/pty"
 	"github.com/gorilla/websocket"
 )
 
@@ -41,55 +39,39 @@ func serverWs(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 
-	go doThings(ws)
+	go writePump(ws)
+	go readPump(ws)
 
 }
 
-func doThings(ws *websocket.Conn) {
-	log.Printf("ws open from %s", ws.NetConn().RemoteAddr().String())
+func writePump(ws *websocket.Conn) {
+	log.Printf("ws open: %s", ws.NetConn().LocalAddr().String())
 
 	defer ws.Close()
 
+	buf := []byte("This is a really long message that I have written. You wont see it all!")
+
 	for {
-		size := rand.IntN(64)
-		buf := []byte("This is a really long message that I have written. You wont see it all!")
+		size := rand.IntN(len(buf))
 
 		err := ws.WriteMessage(websocket.TextMessage, buf[:size])
-
 		if err != nil {
-			break
+			log.Printf("ws write error: %s", err)
 		}
 
-		time.Sleep(time.Second * 2)
-
-		mt, p, err := ws.ReadMessage()
-
-		log.Println(mt)
-		log.Println(string(p))
-		if err != nil {
-			log.Printf("error reading ws msg %s", err)
-		}
+		time.Sleep(time.Millisecond * 60)
 
 	}
 
 }
 
-func startShell() ([]byte, error) {
-	ptmx, err := pty.Start(exec.Command("bash", "-c", "ls"))
-	if err != nil {
-		log.Fatal(err)
+func readPump(ws *websocket.Conn) {
+	for {
+		_, p, err := ws.ReadMessage()
+		if err != nil {
+			log.Printf("ws read err: %s", err)
+		}
+
+		log.Printf("ws msg: %s", string(p))
 	}
-
-	buf := make([]byte, 1024)
-	r, err := ptmx.Read(buf)
-	if err != nil {
-		log.Println(err)
-	}
-
-	return buf[:r], nil
-
-}
-
-func doTick() {
-
 }
