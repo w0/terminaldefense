@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/creack/pty"
 )
@@ -11,6 +12,14 @@ import (
 type Terminal struct {
 	pty *os.File
 	hub *Hub
+}
+
+var dangerousCommands = []string{
+	"rm -rf",
+	"sudo rm",
+	"rm",
+	"format",
+	"dd",
 }
 
 func (t *Terminal) start() {
@@ -22,7 +31,7 @@ func (t *Terminal) start() {
 	t.pty = pty
 
 	go t.readFromShell()
-	go t.writeToShell()
+	go t.handleCommand()
 
 }
 
@@ -40,16 +49,36 @@ func (t *Terminal) readFromShell() {
 
 }
 
-func (t *Terminal) writeToShell() {
+func (t *Terminal) writeToShell(cmd []byte) {
+	cmdCR := append(cmd, '\n')
+
+	_, err := t.pty.Write(cmdCR)
+	if err != nil {
+		log.Panicln(err)
+	}
+}
+
+func (t *Terminal) handleCommand() {
 	for {
-		msg := <-t.hub.cmd
+		cmd := <-t.hub.cmd
 
-		msg = append(msg, '\n')
-
-		_, err := t.pty.Write(msg)
-		if err != nil {
-			log.Panicln(err)
+		if checkDanger(cmd) {
+			log.Println("im in danger")
+			//notify ppl
+			// give chance to block
+			// idk
 		}
 
+		t.writeToShell(cmd)
 	}
+}
+
+func checkDanger(cmd []byte) bool {
+	for _, v := range dangerousCommands {
+		if strings.Contains(string(cmd), v) {
+			return true
+		}
+	}
+
+	return false
 }
