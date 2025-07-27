@@ -1,6 +1,8 @@
 FROM debian:latest
 
-COPY terminaldefense terminaldefense
-COPY static/ static/
+COPY terminaldefense /game/terminaldefense
+COPY static/ /game/static/
 
-CMD [ "/terminaldefense" ]
+ENV TD_PORT=8080
+
+CMD [ "/game/terminaldefense" ]

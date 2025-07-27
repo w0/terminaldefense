@@ -8,13 +8,23 @@ import (
 	"net/http"
 	"os"
 	"path"
+
+	_ "github.com/joho/godotenv/autoload"
 )
 
 func main() {
-	cwd, err := os.Getwd()
+	port := os.Getenv("TD_PORT")
+	log.Printf("srv on port %s", port)
+
+	ex, err := os.Executable()
 	if err != nil {
 		log.Fatalln(err)
 	}
+
+	cwd := path.Dir(ex)
+	staticDir := path.Join(cwd, "static")
+
+	log.Printf("srv static from %s", staticDir)
 
 	hub := &Hub{
 		broadcast:  make(chan []byte),
@@ -32,14 +42,12 @@ func main() {
 
 	go term.start()
 
-	srvPath := path.Join(cwd, "static")
-
 	mux := http.NewServeMux()
-	mux.Handle("/", http.FileServer(http.Dir(srvPath)))
+	mux.Handle("/", http.FileServer(http.Dir(staticDir)))
 	mux.HandleFunc("/ws", hub.handleWS)
 
 	srv := http.Server{
-		Addr:    "0.0.0.0:8080",
+		Addr:    ":" + port,
 		Handler: mux,
 	}
 
