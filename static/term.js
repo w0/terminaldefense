@@ -17,8 +17,7 @@ ws.onclose = function (event) {
 term.onKey(({ key, domEvent }) => {
   console.log(key.charCodeAt(0));
   if (key.charCodeAt(0) == 13) {
-    term.write("\n");
-    ws.send(currentLine);
+    ws.send(currentLine.trimStart());
     currentLine = "";
   }
 
