@@ -2,16 +2,28 @@ package main
 
 import (
 	"log"
-	"math/rand/v2"
 	"net/http"
 	"os"
 	"path"
-	"time"
 
 	"github.com/gorilla/websocket"
 )
 
 var upgrader = websocket.Upgrader{}
+
+type Hub struct {
+	broadcast  chan []byte
+	clients    map[*Client]bool
+	register   chan *Client
+	unregister chan *Client
+}
+
+type Client struct {
+	addr string
+	conn *websocket.Conn
+	send chan []byte
+	hub  *Hub
+}
 
 func main() {
 	cwd, err := os.Getwd()
@@ -19,11 +31,20 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	hub := Hub{
+		broadcast:  make(chan []byte),
+		clients:    make(map[*Client]bool),
+		register:   make(chan *Client),
+		unregister: make(chan *Client),
+	}
+
+	go hub.run()
+
 	srvPath := path.Join(cwd, "static")
 
 	mux := http.NewServeMux()
 	mux.Handle("/", http.FileServer(http.Dir(srvPath)))
-	mux.HandleFunc("/ws", serverWs)
+	mux.HandleFunc("/ws", hub.handleWS)
 
 	srv := http.Server{
 		Addr:    "0.0.0.0:8080",
@@ -33,45 +54,66 @@ func main() {
 	srv.ListenAndServe()
 }
 
-func serverWs(w http.ResponseWriter, r *http.Request) {
-	ws, err := upgrader.Upgrade(w, r, nil)
+func (h *Hub) handleWS(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		log.Printf("conn upgrade failed %s", err)
 	}
 
-	go writePump(ws)
-	go readPump(ws)
+	client := &Client{
+		conn: conn,
+		send: make(chan []byte, 256),
+		hub:  h,
+	}
+
+	h.register <- client
+
+	go client.readPump()
+	go client.writePump()
 
 }
 
-func writePump(ws *websocket.Conn) {
-	log.Printf("ws open: %s", ws.NetConn().LocalAddr().String())
-
-	defer ws.Close()
-
-	buf := []byte("This is a really long message that I have written. You wont see it all!")
-
+func (h *Hub) run() {
 	for {
-		size := rand.IntN(len(buf))
+		select {
+		case client := <-h.register:
+			h.clients[client] = true
+			log.Printf("client %s connected, total: %d", client.conn.RemoteAddr().String(), len(h.clients))
 
-		err := ws.WriteMessage(websocket.TextMessage, buf[:size])
-		if err != nil {
-			log.Printf("ws write error: %s", err)
+		case client := <-h.unregister:
+			if _, ok := h.clients[client]; ok {
+				delete(h.clients, client)
+				close(client.send)
+				log.Printf("client %s disconnected", client.conn.RemoteAddr().String())
+			}
+
+		case message := <-h.broadcast:
+			for client := range h.clients {
+				client.send <- message
+			}
 		}
-
-		time.Sleep(time.Millisecond * 60)
-
 	}
-
 }
 
-func readPump(ws *websocket.Conn) {
+func (c *Client) readPump() {
+	defer func() {
+		c.hub.unregister <- c
+		c.conn.Close()
+	}()
+
 	for {
-		_, p, err := ws.ReadMessage()
+		_, msg, err := c.conn.ReadMessage()
 		if err != nil {
-			log.Printf("ws read err: %s", err)
+			break
 		}
 
-		log.Printf("ws msg: %s", string(p))
+		log.Printf("%s, msg: %s", c.conn.RemoteAddr(), msg)
+	}
+}
+
+func (c *Client) writePump() {
+	for {
+		msg := <-c.send
+		c.conn.WriteMessage(websocket.TextMessage, msg)
 	}
 }
