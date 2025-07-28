@@ -7,7 +7,14 @@ const ws = new WebSocket("ws://" + document.location.host + "/ws");
 let currentLine = "";
 
 ws.onmessage = function (event) {
-  term.write(event.data);
+  try {
+    const p = JSON.parse(event.data);
+
+    const d = atob(p);
+    console.log(d);
+  } catch (e) {
+    term.write(event.data);
+  }
 };
 
 ws.onclose = function (event) {
@@ -17,7 +24,14 @@ ws.onclose = function (event) {
 term.onKey(({ key, domEvent }) => {
   console.log(key.charCodeAt(0));
   if (key.charCodeAt(0) == 13) {
-    ws.send(currentLine.trimStart());
+    ws.send(
+      JSON.stringify({
+        type: "CMD",
+        data: {
+          command: currentLine.trimStart(),
+        },
+      }),
+    );
     currentLine = "";
   }
 

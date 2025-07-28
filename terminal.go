@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"os"
 	"os/exec"
@@ -10,8 +11,14 @@ import (
 )
 
 type Terminal struct {
-	pty *os.File
-	hub *Hub
+	pty     *os.File
+	hub     *Hub
+	pending map[string]PendingCommand
+}
+
+type PendingCommand struct {
+	Command  []byte
+	Executed bool
 }
 
 var dangerousCommands = []string{
@@ -32,6 +39,7 @@ func (t *Terminal) start() {
 
 	go t.readFromShell()
 	go t.handleCommand()
+	go t.handleAction()
 
 }
 
@@ -63,10 +71,16 @@ func (t *Terminal) handleCommand() {
 		cmd := <-t.hub.cmd
 
 		if checkDanger(cmd) {
-			log.Println("im in danger")
-			//notify ppl
-			// give chance to block
-			// idk
+
+			cmdId := hashIt(string(cmd))
+
+			t.pending[cmdId] = PendingCommand{
+				Command:  cmd,
+				Executed: false,
+			}
+
+			t.notifyAdmin(cmd)
+			continue
 		}
 
 		t.writeToShell(cmd)
@@ -81,4 +95,30 @@ func checkDanger(cmd []byte) bool {
 	}
 
 	return false
+}
+
+func (t *Terminal) notifyAdmin(cmd []byte) {
+	res := make(map[string]string)
+
+	res["command"] = string(cmd)
+	res["dangerous"] = "true"
+
+	resJson, _ := json.Marshal(res)
+
+	for client := range t.hub.clients {
+		if client.role == "sysadmin" {
+			client.conn.WriteJSON(resJson)
+		}
+	}
+}
+
+func (t *Terminal) handleAction() {
+	for {
+		action := <-t.hub.action
+
+		if action.Action == "allow" {
+			t.writeToShell(t.pending[action.Id].Command)
+		}
+
+	}
 }

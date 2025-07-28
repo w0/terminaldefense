@@ -10,12 +10,15 @@ import (
 var upgrader = websocket.Upgrader{}
 
 type Hub struct {
+	action     chan Action
 	broadcast  chan []byte
 	cmd        chan []byte
 	previous   []byte
 	clients    map[*Client]bool
 	register   chan *Client
 	unregister chan *Client
+	terminal   *Terminal
+	nextRole   string // this should be a map of active roles and count.
 }
 
 func (h *Hub) handleWS(w http.ResponseWriter, r *http.Request) {
@@ -29,6 +32,15 @@ func (h *Hub) handleWS(w http.ResponseWriter, r *http.Request) {
 		conn: conn,
 		send: make(chan []byte, 256),
 		hub:  h,
+		role: h.nextRole,
+	}
+
+	// need logic to balanace roles across pool of players
+	// hub should balance based on active players, move clients between roles to keep game moving.
+	if h.nextRole == "hacker" {
+		h.nextRole = "sysadmin"
+	} else {
+		h.nextRole = "hacker"
 	}
 
 	h.register <- client
