@@ -16,12 +16,13 @@ func main() {
 	port := os.Getenv("TD_PORT")
 	log.Printf("srv on port %s", port)
 
-	ex, err := os.Getwd()
+	ex, err := os.Executable()
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	staticDir := path.Join(ex, "static")
+	cwd := path.Dir(ex)
+	staticDir := path.Join(cwd, "static")
 
 	log.Printf("srv static from %s", staticDir)
 
