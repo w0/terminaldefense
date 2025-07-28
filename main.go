@@ -39,7 +39,7 @@ func main() {
 
 	term := &Terminal{
 		hub:     hub,
-		pending: make(map[string]PendingCommand),
+		pending: make(map[string]*PendingCommand),
 	}
 
 	go term.start()

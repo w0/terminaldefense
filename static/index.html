@@ -3,6 +3,7 @@
     <head>
         <link rel="stylesheet" href="node_modules/@xterm/xterm/css/xterm.css" />
         <script src="node_modules/@xterm/xterm/lib/xterm.js"></script>
+        <link rel="stylesheel" href="style.css" />
     </head>
     <body>
         <p>oh no hackers!!!</p>
@@ -10,10 +11,11 @@
             <script src="term.js"></script>
         </div>
 
-        <div id="admin">
+        <div id="admin" style="visibility: hidden">
             <p>🚨🚨🚨🚨</p>
-            <button id="allow">allow</button>
-            <button id="bloack">block</button>
+            <p id="cmd"></p>
+            <button id="allow" onclick="handleClick(this)">allow</button>
+            <button id="block" onclick="handleClick(this)">block</button>
         </div>
     </body>
 </html>

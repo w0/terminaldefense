@@ -41,6 +41,7 @@ func (c *Client) readPump() {
 		err := c.conn.ReadJSON(&msg)
 		if err != nil {
 			log.Printf("json read %s", err)
+			break
 		}
 
 		switch msg.Type {
@@ -58,6 +59,9 @@ func (c *Client) readPump() {
 				log.Printf("action %s", err)
 			}
 			c.hub.action <- actionMsg
+
+		default:
+			log.Println("invalid msg")
 		}
 	}
 }

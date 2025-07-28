@@ -5,13 +5,22 @@ term.open(document.getElementById("terminal"));
 const ws = new WebSocket("ws://" + document.location.host + "/ws");
 
 let currentLine = "";
+let cmdId = "";
 
 ws.onmessage = function (event) {
-  try {
-    const p = JSON.parse(event.data);
+  console.log(event);
 
-    const d = atob(p);
-    console.log(d);
+  try {
+    const msg = JSON.parse(event.data);
+
+    if (msg.dangerous === "true") {
+      const alertPanel = document.getElementById("admin");
+      alertPanel.style.visibility = "visible";
+      cmdId = msg.id;
+
+      const cmdP = document.getElementById("cmd");
+      cmdP.textContent = msg.command;
+    }
   } catch (e) {
     term.write(event.data);
   }
@@ -45,3 +54,18 @@ term.onKey(({ key, domEvent }) => {
   currentLine += key;
   term.write(key);
 });
+
+function handleClick(button) {
+  ws.send(
+    JSON.stringify({
+      type: "ACTION",
+      data: {
+        action: button.id,
+        id: cmdId,
+      },
+    }),
+  );
+
+  const alertPanel = document.getElementById("admin");
+  alertPanel.style.visibility = "hidden";
+}
